@@ -30,8 +30,21 @@ pub contract LockedPictureFrame: NonFungibleToken {
             self.returnAddress = returnAddress
         }
 
+        // You can take out all the pictures inside if the key is correct
+        pub fun withdraw(key: @Key): @MemorablePicture.Collection {
+            if (key.pictureFrameId != self.id) {
+                panic("invalid Key")
+            }
+            destroy key
+            self.returnAddress = 0x00
+
+            let ids = self.ownedPictures.getIDs()
+            return <- self.ownedPictures.batchWithdraw(ids: ids)
+        }
+
         destroy() {
-            if (self.returnAddress != nil) {
+            if (self.returnAddress != nil && self.ownedPictures != nil) {
+                // When the picture frame is destroyed, the pictures inside will be send to returnAddress
                 let capability = getAccount(self.returnAddress).getCapability(/public/MemorablePictureCollection)
                 if (capability != nil) {
                     let receiver = capability!.borrow<&{NonFungibleToken.Receiver}>()!
@@ -47,7 +60,7 @@ pub contract LockedPictureFrame: NonFungibleToken {
 
     pub resource interface CollectionBorrow {
         pub fun borrowNFT(id: UInt64): &NFT
-        pub fun getBackNFT(id: UInt64)
+        pub fun getBackPictures(id: UInt64, key: @Key): @MemorablePicture.Collection
     }
 
     // Extended Receiver interface with depositKey function
@@ -59,7 +72,7 @@ pub contract LockedPictureFrame: NonFungibleToken {
 
     pub resource Collection: NonFungibleToken.Provider, NonFungibleToken.Receiver {
         pub var ownedNFTs: @{UInt64: NFT}
-        pub var ownedKeys: @{UInt64: Key}
+        pub var ownedKeys: @{UInt64: Key} // Keys to take pictures out from the picture frame
 
         init () {
             self.ownedNFTs <- {}
@@ -96,11 +109,13 @@ pub contract LockedPictureFrame: NonFungibleToken {
             destroy tokens
         }
 
+        // Withdraw the key to open the picture frame
         pub fun withdrawKey(withdrawID: UInt64): @Key {
             let token <- self.ownedKeys.remove(key: withdrawID) ?? panic("missing NFT")
             return <-token
         }
 
+        // Deposit the key to open the picture frame
         pub fun depositKey(token: @Key) {
             let id: UInt64 = token.id
             let oldToken <- self.ownedKeys[id] <- token
@@ -115,20 +130,17 @@ pub contract LockedPictureFrame: NonFungibleToken {
             return &self.ownedNFTs[id] as &NFT
         }
 
-        // 借用タグに書かれている貸主に NFT を返す
-        pub fun getBackNFT(id: UInt64) {
-            /*
+        // If you have the key, you can take out the pictures inside.
+        // At this time, the picture frame and the key are destroyed.
+        pub fun getBackPictures(id: UInt64, key: @Key): @MemorablePicture.Collection {
+            if (key.pictureFrameId != id) {
+                panic("invalid Key")
+            }
             let token <- self.ownedNFTs.remove(key: id) ?? panic("missing NFT")
-
-            let tag <- token.borrowingTag.remove(key: "BorrowingTag") ?? panic("missing borrowingTag")
-            let receiver = getAccount(tag.lender)
-                    .getCapability(/public/NFTReceiver)!
-                    .borrow<&{NonFungibleToken.Receiver}>()!
-            destroy tag
-
+            let pictures <- token.withdraw(key: <-key)
             emit Withdraw(id: token.id, from: self.owner?.address)
-            receiver.deposit(token: <-token)
-            */
+            destroy token
+            return <-pictures
         }
 
         destroy() {
