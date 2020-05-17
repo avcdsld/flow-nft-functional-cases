@@ -7,18 +7,23 @@ transaction {
     prepare(signer: AuthAccount) {
         let collectionRef = signer.borrow<&MemorablePicture.Collection>(from: /storage/MemorablePictureCollection)!
 
+        // Message or comment (or graffiti) on the picture
         let memory <- MemorablePicture.createDraftMemory(
             message: "This is a cool photo!",
             graffiti: "" // You can also add graffiti as svg
         )
+        
+        // Save to the account storage once to identify who sent the message
         signer.save(<-memory, to: /storage/DraftMemory)
-
         let memoryRef = signer.borrow<&MemorablePicture.DraftMemory>(from: /storage/DraftMemory)!
+
+        // Add Message to the picture
         collectionRef.addMemory(id: 0, memory: memoryRef)
 
         // You can also delete the message if you are the owner
         // collectionRef.removeMemory(id: 0, memoryId: 0)
 
+        // Destroy a message that has already been sent
         let createdMemory <- signer.load<@MemorablePicture.DraftMemory>(from: /storage/DraftMemory)
         destroy createdMemory
 
