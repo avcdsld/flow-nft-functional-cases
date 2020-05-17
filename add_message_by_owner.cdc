@@ -12,7 +12,7 @@ transaction {
             message: "This is a cool photo!",
             graffiti: "" // You can also add graffiti as svg
         )
-        
+
         // Save to the account storage once to identify who sent the message
         signer.save(<-memory, to: /storage/DraftMemory)
         let memoryRef = signer.borrow<&MemorablePicture.DraftMemory>(from: /storage/DraftMemory)!
@@ -29,6 +29,7 @@ transaction {
 
         log("Added a message to a NFT by the owner (0x02)")
 
+        // Show messages of the NFT
         let token = collectionRef.borrowNFT(id: 0)
         log("nft's memories:")
         log(token.getMemories())
