@@ -17,12 +17,12 @@ transaction {
             .getCapability(/public/MemorablePictureNFTReceiver)!
             .borrow<&{NonFungibleToken.Receiver}>()!
 
-        // トークン1
+        // Token 1
         let playerForNFT1: Address = 0x01
         self.minter.mintNFT(
             recipient: recipient,
-            issuer: self.issuer,
-            players: [playerForNFT1], // 写真に写っている人物のアカウント
+            issuer: self.issuer,      // Issuer of the token
+            players: [playerForNFT1], // Accounts of the people in the picture (e.g. basketball player)
             metadata: {
                 "image": "https://bit.ly/3cBmJMU",
                 "photographer": "Keith Johnston",
@@ -30,7 +30,7 @@ transaction {
             }
         )
 
-        // トークン2
+        // Token 2
         let player1ForNFT2: Address = 0x03
         let player2ForNFT2: Address = 0x04
         self.minter.mintNFT(
